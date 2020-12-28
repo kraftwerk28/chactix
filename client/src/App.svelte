@@ -26,25 +26,21 @@
 
   ws.addEventListener('open', () => {
     send('username', username);
-    send('getusers');
 
     ws.addEventListener('message', (evt) => {
       const { type, data } = JSON.parse(evt.data);
-      console.log(type, data);
       switch (type) {
         case 'msg': {
-          const [uid, text] = data;
-          const user = users.find(u => u.id === uid);
-          messages = [...messages, { username, text }];
+          messages = [...messages, data];
           break;
         }
         case 'join': {
           users = [...users, data];
           break;
         }
-        case 'userlist':
-          users = data.slice();
-          break;
+        case 'restore':
+          users = data.users;
+          messages = data.messages;
         default:
           break;
       }
@@ -56,7 +52,7 @@
   <ul>
     {#each messages as message}
       <li>
-        <span>{message.username}:</span>
+        <span>{users.find(user => user.id === message.user_id).username}:</span>
         <span>{message.text}</span>
       </li>
     {/each}

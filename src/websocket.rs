@@ -1,9 +1,10 @@
-use crate::{chatserver::ChatServer, message::*};
+use crate::chatserver::ChatServer;
 use actix::prelude::{
     Actor, ActorContext, AsyncContext, ContextFutureSpawner, StreamHandler,
 };
 use actix::{fut, ActorFuture, Addr, Handler, WrapFuture};
 use actix_web_actors::ws;
+use message::*;
 
 type WsResult = Result<ws::Message, ws::ProtocolError>;
 
@@ -21,7 +22,7 @@ impl Actor for WebsocketSession {
         self.chatserver
             .send(msg)
             .into_actor(self)
-            .then(|result, actor, ctx| {
+            .then(|result, actor, _| {
                 if let Ok(id) = result {
                     actor.user_id = id;
                     log::debug!("New ws session #{}", id);
@@ -58,7 +59,10 @@ impl StreamHandler<WsResult> for WebsocketSession {
                     use ClientMessage::*;
                     match msg {
                         Text(text) => {
-                            let tmsg = Message::Msg(self.user_id, text);
+                            let tmsg = Message::Msg(UserMessage {
+                                user_id: self.user_id,
+                                text,
+                            });
                             self.chatserver.do_send(tmsg)
                         }
                         Username(username) => {
@@ -77,6 +81,7 @@ impl StreamHandler<WsResult> for WebsocketSession {
                             let msg = Message::GetUsers(self.user_id);
                             self.chatserver.do_send(msg);
                         }
+                        _ => (),
                     }
                 }
             }

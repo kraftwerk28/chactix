@@ -3,12 +3,25 @@ use serde::{Deserialize, Serialize};
 
 pub type UserID = u32;
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct History {
+    pub messages: Vec<UserMessage>,
+    pub users: Vec<User>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub username: String,
     pub id: UserID,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserMessage {
+    pub user_id: UserID,
+    pub text: String
+}
+
+#[allow(dead_code)]
 #[derive(ActixMessage)]
 #[rtype(result = "UserID")]
 pub struct NewConnection(pub Recipient<Message>);
@@ -20,10 +33,11 @@ pub struct NewConnection(pub Recipient<Message>);
 pub enum Message {
     Join(User),
     Leave(UserID),
-    Msg(UserID, String),
+    Msg(UserMessage),
     Err(String),
     UserInfo(User),
     UserList(Vec<User>),
+    Restore(History),
 
     GetMe(UserID),
     GetUsers(UserID),
@@ -36,4 +50,5 @@ pub enum ClientMessage {
     Text(String),
     GetMe,
     GetUsers,
+    Restore,
 }

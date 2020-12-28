@@ -1,15 +1,17 @@
 use actix::{Actor, Context, Handler, Recipient};
+use message::*;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
-
-use crate::message::{Message, NewConnection, User, UserID};
 
 static UID: AtomicU32 = AtomicU32::new(0);
 
 pub struct ChatServer {
     pub connections: HashMap<UserID, Recipient<Message>>,
     pub users: HashMap<UserID, User>,
+    pub messages: Vec<UserMessage>,
 }
+
+impl ChatServer {}
 
 impl Actor for ChatServer {
     type Context = Context<Self>;
@@ -20,6 +22,7 @@ impl ChatServer {
         Self {
             connections: HashMap::new(),
             users: HashMap::new(),
+            messages: Vec::new(),
         }
     }
 
@@ -29,7 +32,6 @@ impl ChatServer {
                 continue;
             }
             if let Some(conn) = self.connections.get(uid) {
-                log::debug!("Sending to #{}", uid);
                 conn.do_send(msg.clone()).unwrap();
             }
         }
@@ -38,6 +40,13 @@ impl ChatServer {
     pub fn send_to(&self, msg: Message, user_id: UserID) {
         if let Some(conn) = self.connections.get(&user_id) {
             conn.do_send(msg).unwrap();
+        }
+    }
+
+    pub fn restorepoint(&self) -> History {
+        History {
+            messages: self.messages.clone(),
+            users: self.users.values().cloned().collect::<Vec<_>>(),
         }
     }
 }
@@ -74,9 +83,10 @@ impl Handler<Message> for ChatServer {
                     self.connections
                 );
                 self.broadcast(msg.clone(), Some(user.id));
+                let restoremsg = Message::Restore(self.restorepoint());
+                self.send_to(restoremsg, user.id);
             }
             Message::Leave(user_id) => {
-                self.users.remove(user_id);
                 self.connections.remove(user_id);
                 log::debug!(
                     "Users: {:?}; Connections: {:?}",
@@ -85,7 +95,8 @@ impl Handler<Message> for ChatServer {
                 );
                 self.broadcast(msg.clone(), None);
             }
-            Message::Msg(_, _) => {
+            Message::Msg(user_message) => {
+                self.messages.push(user_message.clone());
                 self.broadcast(msg.clone(), None);
             }
             Message::GetMe(user_id) => {
