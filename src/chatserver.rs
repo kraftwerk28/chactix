@@ -1,5 +1,7 @@
+use crate::db::connect;
 use actix::{Actor, Context, Handler, Recipient};
 use message::*;
+use postgres::Client;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -9,20 +11,21 @@ pub struct ChatServer {
     pub connections: HashMap<UserID, Recipient<Message>>,
     pub users: HashMap<UserID, User>,
     pub messages: Vec<UserMessage>,
+    pub db: Client,
 }
-
-impl ChatServer {}
 
 impl Actor for ChatServer {
     type Context = Context<Self>;
 }
 
 impl ChatServer {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
+        let db = connect().await;
         Self {
             connections: HashMap::new(),
             users: HashMap::new(),
             messages: Vec::new(),
+            db,
         }
     }
 
@@ -49,6 +52,18 @@ impl ChatServer {
             users: self.users.values().cloned().collect::<Vec<_>>(),
         }
     }
+
+    fn insert_user(&mut self, user: User) {
+        let query = "insert into users (username) values($1)";
+        self.db.execute(query, &[&user.username]).unwrap();
+    }
+
+    fn insert_message(&mut self, msg: UserMessage) {
+        let query = "insert into messages (local_user_id, text) values($1, $2)";
+        self.db
+            .execute(query, &[&(msg.user_id as i32), &msg.text])
+            .unwrap();
+    }
 }
 
 impl Handler<NewConnection> for ChatServer {
@@ -67,13 +82,13 @@ impl Handler<NewConnection> for ChatServer {
 
 impl Handler<Message> for ChatServer {
     type Result = ();
+
     fn handle(
         &mut self,
         msg: Message,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
         log::debug!("Message: {:?}", &msg);
-
         match &msg {
             Message::Join(user) => {
                 self.users.insert(user.id, user.clone());
@@ -85,6 +100,7 @@ impl Handler<Message> for ChatServer {
                 self.broadcast(msg.clone(), Some(user.id));
                 let restoremsg = Message::Restore(self.restorepoint());
                 self.send_to(restoremsg, user.id);
+                self.insert_user(user.clone());
             }
             Message::Leave(user_id) => {
                 self.connections.remove(user_id);
@@ -98,6 +114,7 @@ impl Handler<Message> for ChatServer {
             Message::Msg(user_message) => {
                 self.messages.push(user_message.clone());
                 self.broadcast(msg.clone(), None);
+                self.insert_message(user_message.clone());
             }
             Message::GetMe(user_id) => {
                 if let Some(user) = self.users.get(user_id) {

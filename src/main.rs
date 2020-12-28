@@ -1,4 +1,5 @@
 mod chatserver;
+mod db;
 mod message;
 mod routes;
 mod state;
@@ -14,8 +15,8 @@ async fn main() -> Result<(), io::Error> {
     dotenv::dotenv().expect("It should be parsed");
     pretty_env_logger::init();
 
-    let chatserver = ChatServer::new().start();
-    let state = AppState::new(chatserver);
+    let chatserver = ChatServer::new().await;
+    let state = AppState::new(chatserver.start());
     let app_data = web::Data::new(RwLock::new(state));
 
     let app_factory = move || {

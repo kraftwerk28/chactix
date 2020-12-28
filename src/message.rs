@@ -18,7 +18,7 @@ pub struct User {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserMessage {
     pub user_id: UserID,
-    pub text: String
+    pub text: String,
 }
 
 #[allow(dead_code)]
