@@ -104,6 +104,7 @@ impl Handler<Message> for ChatServer {
             }
             Message::Leave(user_id) => {
                 self.connections.remove(user_id);
+                self.users.remove(user_id);
                 log::debug!(
                     "Users: {:?}; Connections: {:?}",
                     self.users,
