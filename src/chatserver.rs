@@ -1,5 +1,6 @@
 use crate::db::connect;
 use actix::{Actor, Context, Handler, Recipient};
+use actix_broker::BrokerSubscribe;
 use message::*;
 use postgres::Client;
 use std::collections::HashMap;
@@ -16,6 +17,10 @@ pub struct ChatServer {
 
 impl Actor for ChatServer {
     type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        self.subscribe_system_async::<Message>(ctx);
+    }
 }
 
 impl ChatServer {

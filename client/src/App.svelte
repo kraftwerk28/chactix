@@ -8,10 +8,9 @@
     while (!username) {
       username = (prompt('Username') ?? '').trim();
     }
-    ws.addEventListener('open', () => {
-      send('username', username);
-      ws.addEventListener('message', onMessage);
-    });
+    console.log('opened');
+    send('username', username);
+    ws.addEventListener('message', onMessage);
   });
 
   let users = [];

@@ -3,6 +3,7 @@ use actix::prelude::{
     Actor, ActorContext, AsyncContext, ContextFutureSpawner, StreamHandler,
 };
 use actix::{fut, ActorFuture, Addr, Handler, WrapFuture};
+use actix_broker::BrokerIssue;
 use actix_web_actors::ws;
 use message::*;
 
@@ -63,7 +64,8 @@ impl StreamHandler<WsResult> for WebsocketSession {
                                 user_id: self.user_id,
                                 text,
                             });
-                            self.chatserver.do_send(tmsg)
+                            self.issue_system_async(tmsg);
+                            // self.chatserver.do_send(tmsg);
                         }
                         Username(username) => {
                             let user = User {
@@ -71,15 +73,18 @@ impl StreamHandler<WsResult> for WebsocketSession {
                                 username,
                             };
                             let msg = Message::Join(user);
-                            self.chatserver.do_send(msg);
+                            // self.chatserver.do_send(msg);
+                            self.issue_system_async(msg);
                         }
                         GetMe => {
                             let msg = Message::GetMe(self.user_id);
-                            self.chatserver.do_send(msg);
+                            // self.chatserver.do_send(msg);
+                            self.issue_system_async(msg);
                         }
                         GetUsers => {
                             let msg = Message::GetUsers(self.user_id);
-                            self.chatserver.do_send(msg);
+                            self.issue_system_async(msg);
+                            // self.chatserver.do_send(msg);
                         }
                         _ => (),
                     }

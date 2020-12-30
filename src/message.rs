@@ -22,7 +22,7 @@ pub struct UserMessage {
 }
 
 #[allow(dead_code)]
-#[derive(ActixMessage)]
+#[derive(Clone, ActixMessage)]
 #[rtype(result = "UserID")]
 pub struct NewConnection(pub Recipient<Message>);
 

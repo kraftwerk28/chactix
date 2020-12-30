@@ -30,7 +30,7 @@ async fn main() -> io::Result<()> {
             .route(
                 "/",
                 web::get()
-                    .guard(guard::Header("Connection", "Upgrade"))
+                    .guard(guard::Header("Upgrade", "websocket"))
                     .to(serve_websocket),
             )
             .service(Files::new("/", pubdir).index_file("index.html"))
